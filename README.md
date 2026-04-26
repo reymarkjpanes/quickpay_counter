@@ -1,3 +1,36 @@
+# Freelance Escrow
+
+A trustless, low-cost escrow system for freelancers and clients, built as a Soroban smart contract on Stellar.
+
+---
+
+## Problem
+
+Freelancers and small agencies working with international clients face high financial risk and friction. Upfront payment disputes, delayed bank transfers, and expensive third-party escrow services mean freelancers often perform work without guaranteed payment, while clients lack trust that deliverables will be met. Traditional methods take days to settle, lock up working capital, and charge high fees—making them impractical for project-based, gig-economy work.
+
+## Solution
+
+Freelance Escrow utilizes Stellar and Soroban smart contracts to act as a transparent, non-custodial escrow. 
+
+Clients lock funds (such as USDC) into an on-chain contract. The contract strictly enforces the agreement: funds are released to the freelancer upon client approval, or automatically refunded to the appropriate party if deadlines pass. Settlement happens in 3–5 seconds with transaction fees under $0.01, relying entirely on programmable on-chain logic rather than intermediaries.
+
+---
+
+## Demo Flow (CLI)
+
+1. **Create Escrow:** The client locks tokens against the contract, specifying the freelancer's address and a UNIX deadline.
+2. **Approve Work:** Once deliverables are met, the client invokes `approve_work` to release funds to the freelancer.
+3. **Claim Expired:** If the client disappears or stalls, the freelancer invokes `claim_expired` after the deadline to reclaim the locked funds.
+
+---
+
+## Architecture
+Stellar Testnet └── FreelanceEscrow Soroban Contract (contracts/src/lib.rs) └── Escrow Logic (lock, release, expiry, read-only state)
+
+code
+
+Copy
+
 No frontend and no backend server. All escrow state, balances, and lifecycle rules live immutably on-chain via the Soroban contract.
 
 ---
@@ -116,3 +149,4 @@ Independent freelancers, remote contractors, and small agencies who require a fa
 
 Why Stellar
 No other chain provides sub-cent fees, 3-5 second finality, and native stablecoin support out-of-the-box. By building on Soroban, Freelance Escrow enforces contractual agreements immutably at the ledger level, ensuring fairness for both clients and freelancers without intermediaries or gas fee volatility.
+
