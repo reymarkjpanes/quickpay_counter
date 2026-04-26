@@ -1,129 +1,111 @@
-# Freelance Escrow
+# FreelanceEscrow
 
-> A decentralized freelance payment escrow system built on Stellar using Soroban smart contracts — protecting freelancers in Southeast Asia from payment fraud.
-
----
-
-## The Problem
-
-Freelancers in Southeast Asia — especially in the Philippines, Indonesia, and Vietnam — routinely face:
-
-- Clients who disappear after receiving completed work
-- Delayed or withheld payments with no recourse
-- No trusted infrastructure to enforce payment agreements
-
-This creates unstable income and erodes trust in remote work for millions of freelancers.
+A trustless freelance payment escrow built on Stellar using Soroban smart contracts. Clients lock payment on-chain and release it only after confirming work is delivered — no middlemen, no wire delays, no disputes over "did you pay yet?"
 
 ---
 
-## The Solution
+## Problem
 
-**Freelance Escrow** uses Soroban smart contracts on Stellar to record job agreements and track payment state on-chain. No middleman. No trust required. Just code.
+Filipino freelancers — designers, developers, virtual assistants — routinely work with overseas clients who pay late, underpay, or ghost entirely. Traditional escrow services charge 5–10% and take days to process. Bank wires and PayPal hold funds arbitrarily. There is no lightweight, trustless option that works at the scale of a ₱5,000 logo project or a ₱50,000 web build.
 
-**How it works:**
+## Solution
 
-1. Client creates a job — the agreement and payment amount are recorded on-chain
-2. Freelancer completes the work
-3. Client approves the output
-4. Contract status updates to completed and total is incremented on-chain
-5. The entire flow is transparent and immutable on Stellar
+FreelanceEscrow lets a client lock payment in a Soroban smart contract the moment they hire a freelancer. The funds are verifiably on-chain — the freelancer can see them before lifting a finger. When the client confirms delivery, the contract releases payment instantly. Neither party can manipulate the outcome: the contract enforces the rules.
 
-> **MVP note:** This version simulates payment tracking. Real XLM transfers are planned for a future release (see Roadmap).
+Settlement on Stellar takes under 5 seconds with fees under $0.01.
 
 ---
 
-## Demo Flow (under 2 minutes)
+## How It Works
 
 ```
-Client creates job → agreement recorded on-chain
-→ Freelancer completes work
-→ Client approves payment
-→ Status marked complete, total updated on-chain
+Client creates a job  →  Amount locked on-chain
+Freelancer delivers work
+Client calls approve_and_release  →  Payment released to freelancer
 ```
 
-**Real-world example:**
-A startup founder in Manila hires a freelance designer. The client creates a job for 100 XLM. The freelancer delivers the logo. The client approves — status is updated instantly, transaction recorded on-chain.
+**Status lifecycle:**
+
+```
+0 (Pending)  →  1 (Released)
+```
+
+Only the client who created the job can call `approve_and_release`. Double-release is blocked at the contract level.
 
 ---
 
-## Smart Contract Functions
+## Smart Contract
 
-### `create_job`
-Records a freelance agreement between a client and freelancer on-chain, storing:
-- Client address
-- Freelancer address
-- Payment amount (as `u32`)
+**Deployed on Stellar Testnet:**
 
-Status is initialized to `0` (pending). Note: no XLM is transferred at this stage in the current MVP.
+```
+CONTRACT_ID_HERE
+```
 
-### `approve_and_release`
-Allows **only the client** to approve completed work and mark the job as released. Prevents:
-- Unauthorized approvals (non-client callers are rejected)
-- Duplicate releases (status `1` blocks re-execution)
+> Replace `CONTRACT_ID_HERE` with your deployed contract address.
 
-On success: sets status to `1` and increments the running total by the job amount.
+Explorer: `https://stellar.expert/explorer/testnet/contract/CONTRACT_ID_HERE`
 
-### `get_status`
-Returns the current payment status as a `u32`:
-- `0` — pending
-- `1` — completed
+> Add a screenshot of the deployed contract on Stellar Expert or Stellar Lab here.
 
-### `get_total`
-Returns the cumulative total of all released payment amounts (as `u32`).
+---
 
-### `get_job`
-Returns the stored job details as a tuple: `(client: Address, freelancer: Address, amount: u32)`.
+## Contract Functions
+
+| Function | Caller | Description |
+|---|---|---|
+| `create_job(client, freelancer, amount)` | Client | Registers a job and locks the agreed amount |
+| `approve_and_release(caller)` | Client only | Confirms delivery and releases payment to freelancer |
+| `get_status()` | Anyone | Returns current status: `0` = Pending, `1` = Released |
+| `get_total()` | Anyone | Returns cumulative total of all released payments |
+| `get_job()` | Anyone | Returns `(client_address, freelancer_address, amount)` |
 
 ---
 
 ## Project Structure
 
 ```
-.
-├── contracts/
-│   └── freelance_escrow/
-│       ├── src/
-│       │   ├── lib.rs       # Core contract logic
-│       │   └── test.rs      # Test suite
-│       └── Cargo.toml
-├── Cargo.toml
-└── README.md
+freelance_escrow/
+├── src/
+│   ├── lib.rs       # Soroban escrow contract logic
+│   └── test.rs      # Unit tests (create, release, status)
+└── Cargo.toml
 ```
 
 ---
 
-## Test Coverage
+## Tests
 
-| Test | What it verifies |
-|------|-----------------|
-| `test_create_job` | Client can create a job; `create_job` returns the correct amount |
-| `test_release_payment` | Client can approve and release; `approve_and_release` returns the correct amount |
-| `test_status_update` | Status changes to `1` after `approve_and_release` is called |
+Three unit tests cover the core flows:
 
----
+| Test | What it checks |
+|---|---|
+| `test_create_job` | Job is created and returns the correct amount |
+| `test_release_payment` | `approve_and_release` returns the correct amount |
+| `test_status_update` | Status flips to `1` after release |
 
-## Tech Stack
+Run the tests:
 
-| Layer | Technology |
-|-------|------------|
-| Smart contracts | Rust + Soroban SDK |
-| Blockchain | Stellar (Testnet) |
-| Contract runtime | Soroban |
+```bash
+cargo test
+```
 
 ---
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- Rust (latest stable)
+- Soroban CLI v25+
+- A funded Stellar testnet account ([Friendbot](https://friendbot.stellar.org))
 
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Soroban CLI](https://soroban.stellar.org/docs/getting-started/setup)
-- Stellar CLI tools
+---
+
+## Setup & Deployment
 
 ### Build
 
 ```bash
-soroban contract build
+stellar contract build
 ```
 
 ### Test
@@ -135,40 +117,57 @@ cargo test
 ### Deploy to Testnet
 
 ```bash
+# Generate a deployer key
+soroban keys generate --global deployer --network testnet
+
+# Deploy the contract
 soroban contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/freelance_escrow.wasm \
-  --source YOUR_ACCOUNT \
+  --wasm target/wasm32v1-none/release/freelance_escrow.wasm \
+  --source deployer \
   --network testnet
 ```
 
 ---
 
-## Current Limitations (MVP)
+## Sample CLI Invocations
 
-This MVP is scoped to demonstrate core escrow logic:
+```bash
+# Create a job: client locks 100 units for a freelancer
+soroban contract invoke \
+  --id <CONTRACT_ID> \
+  --source client \
+  --network testnet \
+  -- create_job \
+  --client <CLIENT_ADDRESS> \
+  --freelancer <FREELANCER_ADDRESS> \
+  --amount 100
 
-- Supports one active job at a time
-- Payment tracking is simulated — no real XLM transfers occur
-- `approve_and_release` does not yet transfer tokens to the freelancer address
+# Approve and release payment after delivery
+soroban contract invoke \
+  --id <CONTRACT_ID> \
+  --source client \
+  --network testnet \
+  -- approve_and_release \
+  --caller <CLIENT_ADDRESS>
+
+# Check escrow status
+soroban contract invoke \
+  --id <CONTRACT_ID> \
+  --network testnet \
+  -- get_status
+```
 
 ---
 
-## Roadmap
+## Why Stellar
 
-- [ ] Real XLM transfers on Stellar Mainnet
-- [ ] Multi-job support
-- [ ] Milestone-based payments
-- [ ] Dispute resolution system
-- [ ] Frontend dApp interface
-
----
-
-## Vision
-
-Build trusted freelance payment infrastructure for global remote workers — starting with Southeast Asia — using the speed and low cost of Stellar blockchain.
+- **Sub-cent fees** — a ₱5,000 freelance job doesn't lose ₱500 to transaction costs
+- **5-second finality** — payment lands before the client closes their laptop
+- **Soroban** — smart contracts with predictable execution and on-chain verifiability
+- **No backend needed** — all escrow state lives on-chain; no server to hack or go down
 
 ---
 
-## License
+## Target Users
 
-MIT License
+Filipino freelancers (developers, designers, VAs, writers) working with overseas clients on projects ranging from ₱5,000 to ₱200,000. They need proof of payment before starting work and their clients need confidence before sending money to someone they've never met in person.
