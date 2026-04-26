@@ -1,173 +1,117 @@
-# FreelanceEscrow
+Here is the complete, final version of the README.md. You can highlight everything below, copy it, and paste it directly into your README.md file.
 
-A trustless freelance payment escrow built on Stellar using Soroban smart contracts. Clients lock payment on-chain and release it only after confirming work is delivered — no middlemen, no wire delays, no disputes over "did you pay yet?"
+Freelance Escrow
+A trustless, low-cost escrow system for freelancers and clients, built as a Soroban smart contract on Stellar.
 
----
+Problem
+Freelancers and small agencies working with international clients face high financial risk and friction. Upfront payment disputes, delayed bank transfers, and expensive third-party escrow services mean freelancers often perform work without guaranteed payment, while clients lackables will be met. Traditional methods take days to settle, lock up working capital, and charge high fees—making them impractical for project-based, gig-economy work.
 
-## Problem
+Solution
+Freelance Escrow utilizes Stellar and Soroban smart contracts to act as a transparent, non-custodial escrow.
 
-Filipino freelancers — designers, developers, virtual assistants — routinely work with overseas clients who pay late, underpay, or ghost entirely. Traditional escrow services charge 5–10% and take days to process. Bank wires and PayPal hold funds arbitrarily. There is no lightweight, trustless option that works at the scale of a ₱5,000 logo project or a ₱50,000 web build.
+Clients lock funds (such as USDC) into an on-chain contract. The contract strictly enforces the agreement: funds are released to the freelancer upon client approval, or automatically refunded to the appropriate party if deadlines pass. Settlement happens in 3–5 seconds with transaction fees under $0.01, relying entirely on programmable on-chain logic rather than intermediaries.
 
-## Solution
+Demo Flow (CLI)
+Create Escrow: The client locks tokens against the contract, specifying the freelancer's address and a UNIX deadline.
+Approve Work: Once deliverables are met, the client invokes approve_work to release funds to the freelancer.
+Claim Expired: If the client disappears or stalls, the freelancer invokes claim_expired after the deadline to reclaim the locked funds.
+Architecture
+code
 
-FreelanceEscrow lets a client lock payment in a Soroban smart contract the moment they hire a freelancer. The funds are verifiably on-chain — the freelancer can see them before lifting a finger. When the client confirms delivery, the contract releases payment instantly. Neither party can manipulate the outcome: the contract enforces the rules.
+Copy
+Stellar Testnet
+  └── FreelanceEscrow Soroban Contract (contracts/src/lib.rs)
+       └── Escrow Logic (lock, release, expiry, read-only state)
+No frontend and no backend server. All escrow state, balances, and lifecycle rules live immutably on-chain via the Soroban contract.
 
-Settlement on Stellar takes under 5 seconds with fees under $0.01.
+Stellar Features Used
+Feature	Usage
+Soroban Smart Contracts	Core escrow logic, time-locks, and state management
+Stellar Assets / Tokens	Settling payments (USDC, XLM, or custom tokens)
+Trustlines	Recipient must establish trust for the specific token used
+Low Fees & Speed	Sub-cent transaction costs and 3-5 second finality
+Smart Contract
+Contract ID (Testnet):
 
----
+CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X
+Stellar Lab Explorer:
+https://lab.stellar.org/testnet/contract/CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X
 
-## How It Works
+Contract Functions
+Function	Caller	Description
+create_escrow(...)	Client	Locks funds against a specific freelancer and a UNIX deadline
+approve_work(...)	Client	Releases funds to the freelancer immediately
+claim_expired(...)	Freelancer	Claims locked funds after the deadline has passed
+get_escrow(...)	Anyone	Read-only view of the current escrow state
+Escrow Lifecycle
+Created --> Approved (Funds successfully sent to Freelancer)
+        --> Expired (Freelancer claims funds after deadline passes)
+Prerequisites
+Rust (latest stable)
+Soroban CLI v25+
+A Stellar Testnet account funded via Friendbot
+Build & Deployment
+1. Build the Contract
+bash
 
-```
-Client creates a job  →  Amount locked on-chain
-Freelancer delivers work
-Client calls approve_and_release  →  Payment released to freelancer
-```
+Copy
+# Navigate to the contract directory
+cd contracts
 
-**Status lifecycle:**
+# Build the WASM target
+soroban contract build
 
-```
-0 (Pending)  →  1 (Released)
-```
-
-Only the client who created the job can call `approve_and_release`. Double-release is blocked at the contract level.
-
----
-
-## Smart Contract
-
-**Deployed on Stellar Testnet:**
-
-```
-CONTRACT_ID_HERE
-```
-
-> Replace `CONTRACT_ID_HERE` with your deployed contract address.
-
-Explorer: `https://stellar.expert/explorer/testnet/contract/CONTRACT_ID_HERE`
-
-> Add a screenshot of the deployed contract on Stellar Expert or Stellar Lab here.
-
----
-
-## Contract Functions
-
-| Function | Caller | Description |
-|---|---|---|
-| `create_job(client, freelancer, amount)` | Client | Registers a job and locks the agreed amount |
-| `approve_and_release(caller)` | Client only | Confirms delivery and releases payment to freelancer |
-| `get_status()` | Anyone | Returns current status: `0` = Pending, `1` = Released |
-| `get_total()` | Anyone | Returns cumulative total of all released payments |
-| `get_job()` | Anyone | Returns `(client_address, freelancer_address, amount)` |
-
----
-
-## Project Structure
-
-```
-freelance_escrow/
-├── src/
-│   ├── lib.rs       # Soroban escrow contract logic
-│   └── test.rs      # Unit tests (create, release, status)
-└── Cargo.toml
-```
-
----
-
-## Tests
-
-Three unit tests cover the core flows:
-
-| Test | What it checks |
-|---|---|
-| `test_create_job` | Job is created and returns the correct amount |
-| `test_release_payment` | `approve_and_release` returns the correct amount |
-| `test_status_update` | Status flips to `1` after release |
-
-Run the tests:
-
-```bash
+# Run local Rust unit tests
 cargo test
-```
+2. Deploy to Testnet
+bash
 
----
-
-## Prerequisites
-
-- Rust (latest stable)
-- Soroban CLI v25+
-- A funded Stellar testnet account ([Friendbot](https://friendbot.stellar.org))
-
----
-
-## Setup & Deployment
-
-### Build
-
-```bash
-stellar contract build
-```
-
-### Test
-
-```bash
-cargo test
-```
-
-### Deploy to Testnet
-
-```bash
-# Generate a deployer key
+Copy
+# Generate a persistent identity for deployment
 soroban keys generate --global deployer --network testnet
 
-# Deploy the contract
+# Deploy to Stellar Testnet
 soroban contract deploy \
-  --wasm target/wasm32v1-none/release/freelance_escrow.wasm \
+  --wasm target/wasm32-unknown-unknown/release/freelance_escrow.wasm \
   --source deployer \
   --network testnet
-```
+(Note: The output of this command will be your Contract ID. Ensure it matches the one documented above, or use the provided ID directly.)
 
----
+ocation Examples
 
-## Sample CLI Invocations
+Interact with the deployed contract directly using the Soroban CLI:
 
-```bash
-# Create a job: client locks 100 units for a freelancer
-soroban contract invoke \
-  --id <CONTRACT_ID> \
+bash
+
+Copy
+# 1. Create an escrow (Locking 100 USDC for 1 houroban contract invoke \
+  --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
   --network testnet \
-  -- create_job \
+  -- create_escrow \
   --client <CLIENT_ADDRESS> \
   --freelancer <FREELANCER_ADDRESS> \
-  --amount 100
+  --token <USDC_CONTRACT_ADDRESS> \
+  --amount 100000000 \
+  --deadline $(date -d "+1 hour" +%s)
 
-# Approve and release payment after delivery
+# 2. Approve work (Release funds to freelancer)
 soroban contract invoke \
-  --id <CONTRACT_ID> \
+  --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
-  --network testnet \
-  -- approve_and_release \
-  --caller <CLIENT_ADDRESS>
+ net \
+  -- approve_work \
+  --escrow_id <ESCROW_ID>
 
-# Check escrow status
+# 3. Claim expired funds (Freelancer claims after deadline)
 soroban contract invoke \
-  --id <CONTRACT_ID> \
+  --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
+  --source freelancer \
   --network testnet \
-  -- get_status
-```
+  -- claim_expired \
+  --escrow_id <ESCROW_ID>
+Target Users
+Independent freelancers, remote contractors, and small agencies who require a fast, cheap, and trustless way to secure milestone payments without relying on expensive centralized escrow platforms.
 
----
-
-## Why Stellar
-
-- **Sub-cent fees** — a ₱5,000 freelance job doesn't lose ₱500 to transaction costs
-- **5-second finality** — payment lands before the client closes their laptop
-- **Soroban** — smart contracts with predictable execution and on-chain verifiability
-- **No backend needed** — all escrow state lives on-chain; no server to hack or go down
-
----
-
-## Target Users
-
-Filipino freelancers (developers, designers, VAs, writers) working with overseas clients on projects ranging from ₱5,000 to ₱200,000. They need proof of payment before starting work and their clients need confidence before sending money to someone they've never met in person.
+Why Stellar
+No other chain provides sub-cent fees, 3-5 second finality, and native stablecoin support out-of-the-box. By building on Soroban, Freelance Escrow enforces contractual agreements immutably at the ledger level, ensuring fairness for both clients and freelancers without intermediaries or gas fee volatility.
