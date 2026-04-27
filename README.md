@@ -1,6 +1,6 @@
 🚨 ATTENTION REVIEWERS 🚨
 
-My final project submission is actually in a different repository. Please review my project here: https://github.com/reymarkjpanes/freelancechain
+My final project submission is actually in a different repository for extended project into a full-stack application (frontend + Stellar wallet integration) for evaluation. Please review my project here: https://github.com/reymarkjpanes/freelancechain
 
 ---
 
