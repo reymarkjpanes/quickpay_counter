@@ -1,3 +1,9 @@
+🚨 ATTENTION REVIEWERS 🚨
+
+My final project submission is actually in a different repository. Please review my project here: https://github.com/reymarkjpanes/freelancechain
+
+---
+
 # QuickPay Counter
 
 A trustless, on-chain job payment system built on Stellar using Soroban smart contracts.
@@ -6,7 +12,7 @@ A trustless, on-chain job payment system built on Stellar using Soroban smart co
 
 ## What Is QuickPay Counter?
 
-QuickPay Counter is a **non-custodial, blockchain-based job payment system** that enables clients and freelancers to execute secure, transparent payments on the Stellar network. Using a Soroban smart contract, all job records and payment approvals are stored immutably on-chain with zero intermediaries.
+QuickPay Counter is a **non-custodial, blockchain-based job payment system** that enables clients and freelancers to execute secure, transparent payments on the Stellar network. Using a Soroban smart contract, it provides an immutable, transparent, and near-instant way to manage freelance job payments without intermediaries.
 
 **Current Version:** Proof of concept supporting a single active job per contract instance.
 
