@@ -6,7 +6,9 @@ A trustless, on-chain job payment system built on Stellar using Soroban smart co
 
 ## What Is QuickPay Counter?
 
-QuickPay Counter is a **non-custodial, blockchain-based job payment system** that enables clients and freelancers to execute secure, transparent payments on the Stellar network. Using a Soroban smart contract, it eliminates intermediaries and ensures that payments are only released when the client explicitly approves the work on-chain — providing cryptographic proof of every transaction.
+QuickPay Counter is a **non-custodial, blockchain-based job payment system** that enables clients and freelancers to execute secure, transparent payments on the Stellar network. Using a Soroban smart contract, all job records and payment approvals are stored immutably on-chain with zero intermediaries.
+
+**Current Version:** Proof of concept supporting a single active job per contract instance.
 
 ---
 
@@ -167,44 +169,112 @@ Pending (status = 0) ──── client calls approve_and_release ────�
 
 ---
 
-## Build & Deployment
+## Build & Testing
 
 ### 1. Build the Contract
 
+Navigate to the contract directory:
+
 ```bash
-# Navigate to the contract directory
 cd contracts/freelance_escrow
+```
 
-# Build the WASM target
+#### Using Makefile (Recommended)
+
+Build and run tests:
+```bash
+make all      # Build and run tests
+make build    # Build only
+make test     # Test only
+make fmt      # Format code
+make clean    # Clean build artifacts
+```
+
+#### Using Cargo Directly
+
+Build the WASM target:
+```bash
 stellar contract build
+```
 
-# Run unit tests
+Run unit tests:
+```bash
 cargo test
 ```
 
-### 2. Deploy to Testnet
+### 2. Unit Tests
+
+The contract includes **3 comprehensive unit tests** in `src/test.rs`:
+
+| Test | Purpose |
+|---|---|
+| `test_create_job` | Verifies job creation stores correct amount (100 units) |
+| `test_release_payment` | Verifies client can release payment and amount is returned |
+| `test_status_update` | Verifies job status transitions from pending (0) to released (1) |
+
+Run tests with:
+```bash
+cd contracts/freelance_escrow
+make test
+# or
+cargo test
+```
+
+Expected output:
+```
+running 3 tests
+test test_create_job ... ok
+test test_release_payment ... ok
+test test_status_update ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored
+```
+
+---
+
+## Deployment to Testnet
+
+### 1. Generate a Persistent Identity
 
 ```bash
-# Generate a persistent identity for deployment
 stellar keys generate --global deployer --network testnet
+```
 
-# Deploy to Stellar Testnet
+### 2. Fund Your Account
+
+Visit [Friendbot](https://developers.stellar.org/docs/build/guides/testnet#use-testnet-with-soroban) to fund your account with test XLM.
+
+### 3. Deploy the Contract
+
+```bash
+cd contracts/freelance_escrow
+
 stellar contract deploy \
-  --wasm target/wasm32v1-none/release/freelance_escrow.wasm \
+  --wasm target/wasm32-unknown-unknown/release/freelance_escrow.wasm \
   --source deployer \
   --network testnet
 ```
 
-The output of this command is your **Contract ID**. Use it in the CLI examples below.
+**Output:** The command returns your **Contract ID** (a string starting with `C`). Save this — you'll use it for all CLI invocations.
+
+**Example Contract ID:**
+```
+CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X
+```
 
 ---
 
-## CLI Invocation Examples
+## CLI Usage Examples
 
-Interact with the deployed contract directly using the Soroban CLI:
+Replace `CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X` with your deployed **Contract ID**.
+
+Replace `<CLIENT_ADDRESS>` and `<FREELANCER_ADDRESS>` with actual Stellar addresses.
+
+### 1. Create a Job
+
+Client submits a job with amount for freelancer:
 
 ```bash
-# 1. Create a job (100 units from client to freelancer)
 stellar contract invoke \
   --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
@@ -213,30 +283,62 @@ stellar contract invoke \
   --client <CLIENT_ADDRESS> \
   --freelancer <FREELANCER_ADDRESS> \
   --amount 100
+```
 
-# 2. Approve work and release payment
+**Response:** `100` (the job amount is created and stored)
+
+### 2. Approve Work and Release Payment
+
+Client approves the completed work and releases payment:
+
+```bash
 stellar contract invoke \
   --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
   --network testnet \
   -- approve_and_release \
   --caller <CLIENT_ADDRESS>
+```
 
-# 3. Check payment status (0 = pending, 1 = released)
+**Response:** `100` (the amount released)
+
+**Note:** Only the original client can call this function. Non-clients will receive: `"Only client can approve payment"`
+
+### 3. Check Payment Status
+
+Query the current job status (0 = pending, 1 = released):
+
+```bash
 stellar contract invoke \
   --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
   --network testnet \
   -- get_status
+```
 
-# 4. View total released amount
+**Response Examples:**
+- `0` — Job is pending (not yet approved)
+- `1` — Job has been released
+
+### 4. View Total Released Amount
+
+Query total amount released across all jobs on this contract:
+
+```bash
 stellar contract invoke \
   --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
   --network testnet \
   -- get_total
+```
 
-# 5. View job details (client, freelancer, amount)
+**Response:** Total units released (e.g., `100` if one job for 100 units was released)
+
+### 5. View Job Details
+
+Query job details (client, freelancer, amount):
+
+```bash
 stellar contract invoke \
   --id CBPXD4WLBHOQAX3YRI3Y55LE57ERDT57SLSBP32VFEQNL66PN7MAT26X \
   --source client \
@@ -244,11 +346,35 @@ stellar contract invoke \
   -- get_job
 ```
 
+**Response:** A tuple containing:
+```
+(CLIENT_ADDRESS, FREELANCER_ADDRESS, 100)
+```
+
+---
+
+## Important Limitations (Proof of Concept)
+
+⚠️ **This is a single-job proof of concept.** The current implementation has the following limitations:
+
+1. **Single Active Job:** Only one job can exist per contract instance at a time. Creating a new job will overwrite the previous job.
+   - **Workaround:** Deploy separate contract instances for each job, or upgrade to use indexed storage (maps) for production.
+
+2. **No Multiple Concurrent Jobs:** The contract uses simple instance storage, not maps. This design choice prioritizes simplicity for this POC.
+   - **Future Enhancement:** Implement a job mapping structure with unique job IDs for production use.
+
+3. **No Payment Transfers:** The contract approves payments but does not transfer funds. For production, integrate with Stellar's native asset system or stablecoins (USDC).
+
 ---
 
 ## Target Users
 
 Freelancers and clients who need a simple, trustless way to manage job payments on-chain — with transparent approval workflows and cryptographic proof of every payment event.
+
+This POC is ideal for:
+- Learning Soroban smart contract development
+- Prototyping payment workflows on Stellar
+- Demonstrating immutable job records and approval logic
 
 ---
 
